@@ -1,0 +1,228 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% How to use writeLaTeX: 
+%
+% You edit the source code here on the left, and the preview on the
+% right shows you the result within a few seconds.
+%
+% Bookmark this page and share the URL with your co-authors. They can
+% edit at the same time!
+%
+% You can upload figures, bibliographies, custom classes and
+% styles using the files menu.
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\documentclass[12pt]{article}
+
+\usepackage{sbc-template}
+
+\usepackage{graphicx,url}
+
+%\usepackage[brazil]{babel}   
+\usepackage[utf8]{inputenc} 
+
+\usepackage{float}
+\usepackage{hyperref}
+
+\usepackage{listings}
+\usepackage{color}
+
+\definecolor{dkgreen}{rgb}{0,0.6,0}
+\definecolor{gray}{rgb}{0.5,0.5,0.5}
+\definecolor{mauve}{rgb}{0.58,0,0.82}
+
+\lstset{frame=none,
+  language=C++,
+  aboveskip=3mm,
+  belowskip=3mm,
+  showstringspaces=false,
+  columns=flexible,
+  basicstyle={\small\ttfamily},
+  numbers=none,
+  numberstyle=\tiny\color{gray},
+  keywordstyle=\color{blue},
+  commentstyle=\color{dkgreen},
+  stringstyle=\color{mauve},
+  breaklines=true,
+  breakatwhitespace=true,
+  tabsize=3
+}
+
+     
+\sloppy
+
+\title{Little FS}
+
+\author{Fabricio Araújo Dias}
+
+\address{Instituto Federal de Educação, Ciência e Tecnologia do Ceará
+  (IFCE)\\
+  Avenida Vice-Presidente José Alencar, S/N -- 61.939-140 -- Maracanaú -- CE -- Brasil
+  \email{fabricio.araujo61@aluno.ifce.edu.br}
+}
+
+\begin{document} 
+
+\maketitle
+
+\begin{abstract}
+  This report shows the step-by-step process for testing the Little FS file manager for the ESP32. The test consists of writing the credentials of a Wi-Fi network and the states of an RGB LED in \textit{.txt} files. When the ESP32 starts up, it reads these files and makes the settings.
+\end{abstract}
+     
+\begin{resumo} 
+  Esse relatório mostra o passo a passo para testar o gerenciador de arquivos Little FS para o ESP32. O teste consiste em escrever as credenciais de uma rede Wi-fi e os estados de um LED RGB em arquivos \textit{.txt}. Para quando o ESP32 iniciar, ele ler esses arquivos e realizar as configurações.
+\end{resumo}
+
+
+\section{Introdução}
+
+A quinta atividade prática da disciplina de Microcontroladores consiste em utilizar arquivos no ESP32 utilizando a biblioteca \textit{Little FS}. Para representar o uso, iremos gravar informações em arquivos de texto e, ao reiniciar o ESP32, ler essas informações e configurar a conexão com a rede Wi-Fi e definir os estados de um LED RGB.
+
+\section{Configuração no ESP32}
+
+Utilizamos um ESP32 de 30 pinos, uma protoboard de 400 pontos, um LED RGB, três resistores de 390 ohms, quatro cabos macho-fêmea e um cabo microUSB.
+
+Os pinos de cores do LED RGB são dispostos no topo das colunas, perto da linha negativa da protoboard para que possamos conectar o cátodo do LED RGB nessa linha. O cátodo poderia ser conectado em uma coluna diferente também.
+
+Como é uma configuração simples e a protoboard é pequena, dispomos os resistores para que fiquem na mesma coluna de cada terminal do LED RGB. Isso poderia ser feito utilizando colunas diferentes, mas desse jeito, fica mais organizado.
+
+Por fim, conectados os pinos do ESP32 na protoboard utilizando os cabos macho-fêmea. Os pinos escolhidos para cada terminal do LED RGB foram o 21, 19 e 18 para o temrinal da cor vermelho, verde e azul, respectivamente. O cátodo do LED RGB é conectado ao GND.
+
+\section{Desenvolvimento do Código}
+
+Para gerenciar arquivos, é necessário implementar muitas funções. Procurando economizar tempo e espaço, vamos nos limitar a cinco funções: criar diretório, listar diretório, escrever arquivo, ler arquivo e apagar arquivo.
+
+\subsection{Definindo Constantes e Importando Bibliotecas}
+
+Começando pela parte simples, criamos constantes para representar os pinos do LED (que foram 21, 19 e 18) e configuramos o modo dos pinos para OUTPUT. Também utilizamos constantes para guardar o SSID e a senha da rede Wi-Fi que iremos usar.
+
+Para utilizar o LittleFS, o nosso gerenciador de arquivos, temos que importar duas bibliotecas: FS e LittleFS.
+
+\lstinputlisting[language=C++, firstline=3, lastline=4]{code/main.cpp} 
+
+\subsection{Iniciando o Gerenciador}
+
+Antes, vamos na função setup para inicializar o gerenciador de arquivos LittleFS. Utilizamos o método begin com o parâmetro \textit{true} para que o sistema seja formatado caso ele ainda não tenho sido iniciado ou tenha ocorrido algum problema. Fizemos essa inicialização dentro de um if condicional para caso tenha dado algum erro e o gerenciador não foi inicializado. Sendo assim, não há porquê do programa continuar.
+
+\lstinputlisting[language=C++, firstline=32, lastline=37]{code/main.cpp}
+
+\subsection{Criando Diretórios}
+
+A primeira função que criamos é a \textit{createDir} que recebe como parâmetros a variável do gerenciador de arquivos e um caminho que representa o diretório a ser criado. O gerenciador possui um método chamado \textit{mkdir} que, passando como parâmetro o caminho, ele irá criar esse diretório. O método também retorna algum valor para representar se o processo deu certo ou não. O que é ideal para colocarmos o resultado dentro de um \textit{if} e conferirmos se deu certo.
+
+\lstinputlisting[language=C++, firstline=78, lastline=91]{code/main.cpp}
+
+\subsection{Listando Diretórios}
+
+\lstinputlisting[language=C++, firstline=98, lastline=98]{code/main.cpp}
+
+Vamos para a função \textit{listDir} que irá listar os diretórios. Ela, na verdade, só serve para chamar uma outra função chamada de \textit{listDirAux} que recebe a instância de LittleFS, o caminho e o nível até onde queremos explorar. Como é um projeto simples, deixamos o nível em 1. Usamos o método \textit{open} do LittleFS  para "abrir" o caminho como um File. Conferimos se o valor não é nulo ou se ele não é um diretório.
+
+\lstinputlisting[language=C++, firstline=102, lastline=112]{code/main.cpp}
+
+Vamos utilizar o método \textit{openNextFile} para vasculharmos, um por um, os arquivos daquele diretório. Dentro de um \textit{while}, conferimos se a variável File é um diretório, e se sim, chamamos a função \textit{listDirAux} recursivamente e decrementados o nível. Caso não seja, só imprimimos o nome e o tamanho do arquivo.
+
+\lstinputlisting[language=C++, firstline=114, lastline=124]{code/main.cpp}
+
+\subsection{Escrevendo Arquivos}
+
+\lstinputlisting[language=C++, firstline=137, lastline=137]{code/main.cpp}
+
+A função \textit{writeFile} recebe a variável do gerenciador de arquivos, o caminho do arquivo e a mensagem a ser impressa. O método \textit{open} será usado novamente para abrir algo, e dessa vez acompanhado da constante File\_WRITE para indicar o modo de abertura. Mesmo que o arquivo não exista, ele será criado.
+
+Conferimos se o arquivo foi aberto antes de imprimirmos a mensagem usando o método \textit{print} do LittleFS. O método também retorna um valor para representar se a escrita foi realmente efetuada, e aproveitamos para tratar possíveis erros. Lembre-se que desse modo, ele sempre escreve o novo valor por cima. Ao final da função, fechamos o arquivo com o método \textit{close}.
+
+\lstinputlisting[language=C++, firstline=147, lastline=155]{code/main.cpp}
+
+\subsection{Deletando Arquivos}
+
+\lstinputlisting[language=C++, firstline=210, lastline=210]{code/main.cpp}
+
+Para excluir, \textit{deleteFile} recebe a variável do LittleFS e o caminho do arquivo a ser excluído. O método \textit{remove} do FS faz a exclusão do arquivo. Novamente, o método retorna um valor para representar se o arquivo foi realmente apagado, e tratamos o problema.
+
+\lstinputlisting[language=C++, firstline=213, lastline=220]{code/main.cpp}
+
+Se nada der errado na hora de gravar os documentos, não iremos usar essa função, mas fica registrado caso precise.
+
+\subsection{Ler Arquivos}
+
+\lstinputlisting[language=C++, firstline=158, lastline=158]{code/main.cpp}
+
+Essa parte é mais trabalhosa, pois precisamos não só ler o arquivo como também guardar as informações que estão nele. A função recebe a variável do gerenciador de arquivos e o caminho do arquivo.
+
+Primeiro, instanciamos um vetor de strings vazio chamado de \textit{parts}. Os vetores não são nativos da biblioteca padrão do C++, então você precisa importar a biblioteca \textit{vector}.
+
+\lstinputlisting[language=C++, firstline=5, lastline=5]{code/main.cpp} \newpage
+
+De novo, utilizamos o método \textit{open} para abrir o arquivo no caminho especificado. Checamos se realmente abrimos um arquivo ou não. Se não, retornamos o vetor vazio. Como salvamos o arquivo numa variável do tipo File, podemos usar o método \textit{readString} para ler todo o conteúdo do arquivo e salvar como uma String. Fechamos o arquivo com \textit{close}.
+
+\lstinputlisting[language=C++, firstline=164, lastline=171]{code/main.cpp}
+
+Chegamos à parte complicada que é dividir a string que possuímos para separar as informações que iremos utilizar. Para facilitar o trabalho, vamos definir que as informações estão separadas por vírgula e sem espaço. Então, implementados uma função extra para fazer essa repartição chamada splitString, que recebe a String e o delimitador.
+
+\lstinputlisting[language=C++, firstline=182, lastline=182]{code/main.cpp}
+
+Em splitString, instanciamos um novo vetor de Strings vazio chamado \textit{words}. Também criamos duas variáveis do tipo inteiro chamadas de start (que é inicializada em 0) e end. 
+
+\lstinputlisting[language=C++, firstline=184, lastline=187]{code/main.cpp}
+
+Fizemos uso de um while. A condição dele é que \textit{end} seja diferente de $-1$. A cada iteração, \textit{end} recebe o index do delimitador na string dado um ponto inicial \textit{start}. Descobrindo isso com o método \textit{indexOf} da classe String. Se ele não encontrar o delimitador, ele retorna $-1$. 
+
+Dentro do While, iremos fazer o uso de outro método da classe String chamada \textit{substring} que retorna uma string dado um ponto inicial e um ponto final. Salvamos essa substring e adicionamos ao vetor \textit{words} utilizando o método \textit{push\_back} da classe \textit{vector}. Atualizamos o valor de \textit{start} somando \textit{end} mais o tamanho do delimitador (em casos que ele tenha mais de um caractere).
+
+\lstinputlisting[language=C++, firstline=189, lastline=194]{code/main.cpp} 
+
+Quando ele sair desse \textit{while}, ainda faltará uma palavra a ser adicionada, então só utilizamos novamente o método \textit{substring} para recolher essa última palavra e salvá-la no vetor \textit{words}. Pode acontecer do delimitador ser o último caractere da string, por isso confira se essa última substring tenha um tamanho maior do que 0.
+
+\lstinputlisting[language=C++, firstline=196, lastline=200]{code/main.cpp}
+
+Por fim, retorne o vetor para readFile, e de readFile, retorne esse vetor também para que as informações contídas nele sejam usadas em outro lugar.
+
+\subsection{Retornando ao Setup}
+
+Primeiro, criamos dois diretórios utilizando a função \textit{createDir}: \textit{wifi} e \textit{rgb\_state}. Os títulos são autoexplicativos.
+
+\lstinputlisting[language=C++, firstline=38, lastline=39]{code/main.cpp}
+
+Em seguida, criamos strings que irão guardar as informações para enviarmos ao ESP32. A string \textit{credentials} guarda o SSID e a senha da rede a qual iremos conectar. A string \textit{states} guarda os estados dos pinos do LED RGB. Vamos adotar uma ordem específica e clara para usarmos as informações depois. A string \textit{credentials} começa com o SSID e depois vem a senha. A string \textit{states} começa com o estado do LED vermelho, depois vem o verde, e por fim o azul. As informações são separadas por vírgulas e não devem possuir espaço.
+
+\lstinputlisting[language=C++, firstline=41, lastline=42]{code/main.cpp}
+
+Com o conteúdo guardado, vamos gravar num arquivo de texto no ESP32 utilizando a função writeFile. Passamos o endereço absoluto, especificando o diretório e o nome do arquivo com a extensão .\textit{txt}. Não foi dito, mas a nossas funções normalmente recebem parâmetros \textit{const char *} para textos, mas existe um método da clásse String chamado \textit{c\_str} que retorna o conteúdo da string em \textit{const char *}.
+
+\lstinputlisting[language=C++, firstline=44, lastline=45]{code/main.cpp}
+
+Nesse momento, fazemos \textit{upload} desse código para o ESP32 utilizando o comando $Alt + Ctrl + U$. Agora que temos as informações gravadas no ESP32, apagamos as diretivas que escrevemos no \textit{setup} até agora. Deixando apenas a configuração dos modos dos pinos e a inicialização do LittleFS. \newpage
+
+Vamos nos preocupar em recuperar as informações. Vamos utilizar a função readFile para ler os arquivos que criamos passando o caminho deles. A função retorna um vetor de strings, então criamos um vetor chamado \textit{wifi\_creds} e outro chamado \textit{rgbs}.
+
+\lstinputlisting[language=C++, firstline=47, lastline=48]{code/main.cpp}
+
+Para conectar a internet, primeiro precisamos importar a biblioteca WiFi. 
+
+\lstinputlisting[language=C++, firstline=4, lastline=4]{code/main.cpp}
+
+E configuramos o módulo Wifi para funcione em modo estação. Para que possamos nos conectar a um \textit{access point}. Em seguida, utilizamos o método \textit{begin} para nos conectar à internet passando o SSID e a senha da rede. Para acessar o valor de uma posição do vetor, utilizamos o método \textit{at} e o index. Lembrando que, segundo nossa ordem, a primeira posição é o SSID e a segunda é a senha. O método \textit{begin} só aceita \textit{const char *}, então faremos novamente o uso do método \textit{c\_str}.
+
+\lstinputlisting[language=C++, firstline=50, lastline=51]{code/main.cpp}
+
+Criamos um laço \textit{while} para que confira se a conexão foi realizada com sucesso. Para que o \textit{while} não seja infinito, usamos uma variável wifiRetries que incrementa a cada iteração e irá encerrar o \textit{while} quando chegar em 30.
+
+\lstinputlisting[language=C++, firstline=53, lastline=59]{code/main.cpp}
+
+E por último, vamos alterar o estado dos pinos do LED RGB. Lembrando da ordem das informações em que primeiro vem o estado do pino vermelho, depois do verde, e por último, o azul. Normalmente, utilizamos a função \textit{digitalWrite}. No primeiro parâmetro, dizemos qual é o pino, e no segundo parâmetro, o seu estado. No pino vermelho, acessamos a primeira string do vetor utilizando o método \textit{at} e comparamos se a string é igual à \textit{"HIGH"}. Utilizamos um operador ternário para caso for, ele retorna \textit{HIGH}, e se não for, retorne \textit{LOW}.
+
+\lstinputlisting[language=C++, firstline=69, lastline=71]{code/main.cpp}
+
+Acontece que \textit{HIGH} e \textit{LOW} são constantes de inteiros e não strings. \textit{HIGH} é $1$ e \textit{LOW} é $0$. Poderiamos salvar números no arquivo, e no \textit{digitalWrite}, fazemos um \textit{casting} neles, mas dessa fica mais claro na hora de escrever e ler.
+
+É possível conferir o código implementado nesse \href{https://github.com/fabricio-araujo94/microcontroladores/tree/main/little_fs}{repositório no GitHub}.
+
+\section{Considerações Finais}
+
+E então, conectamos o ESP32 ao computador utilizando um cabo microUSB e enviamos o código para o microcontrolador utilizando novamento o comando $Alt + Ctrl + U$.
+
+Assim, ao iniciar o ESP32, ele lerá os arquivos e irá configurar automaticamente o Wi-fi e os estados dos pinos do LED RGB mesmo que não passamos explicitamente as informações no código. Por certas razões, não foi possível gravar e nem tirar fotos da prática funcionando.
+
+
+\end{document}
