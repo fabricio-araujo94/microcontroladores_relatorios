@@ -1,0 +1,115 @@
+\subsection{Função setup}
+
+Inicializamos o \textit{Serial} com a taxa de 9600.
+
+\begin{lstlisting}
+void setup() {
+    Serial.begin(9600);
+\end{lstlisting}
+
+Inicializamos o Little FS, lemos os arquivos que estão salvos no ESP32 e salvamos nas variáveis.
+
+\begin{lstlisting}
+initLittleFS();
+
+ssid = readFile(LittleFS, ssidPath);
+pass = readFile(LittleFS, passPath);
+ip = readFile(LittleFS, ipPath);
+gateway = readFile(LittleFS, gatewayPath);
+
+Serial.println(ssid);
+Serial.println(pass);
+Serial.println(ip);
+Serial.println(gateway);
+\end{lstlisting}
+
+A exibição das páginas funcionam dessa maneira: se o ESP32 estiver conectado a um rede, é exibido a página \textit{index}; e se não estiver, é exibido a página do Wi-Fi Manager.
+
+Para a exibição de cada página, precisamos utilizar o método \textit{serverStatic} para dizer que os arquivos de um certo diretório são arquivos estáticos. Salvamos os arquivos HTML e CSS na raiz do gerenciador de arquivos, e a pasta raiz se chama "LittleFS".
+
+\begin{lstlisting}
+server.serveStatic("/", LittleFS, "/");
+\end{lstlisting}
+
+Essa é a implementação para quando a conexão estiver feita.
+
+\begin{lstlisting}
+if (initWiFi()) {
+    // envia a pagina index
+    server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
+      request->send(LittleFS, "/index.html", "text/html");
+    });
+    server.serveStatic("/", LittleFS, "/");
+    
+    server.begin();
+\end{lstlisting}
+
+O caso da conexão não ter sido feita é mais trabalhosa, pois precisamos que o ESP32 se torne um \textit{access point} para que outro dispositivo possa se conectar a ele. Isso é possível utilizando o método \textit{SOFTAP} do módulo WiFi, onde definimos o SSID e uma senha. No nosso projeto, utilizamos NULL para que não seja necessário utilizar uma senha.
+
+Também precisamos informar ao usuário qual o endereço IP que ele deve acessar para entrar na página do Wifi Manager. Conseguimos o IP com o meétodo \textit{softAPIP} e imprimimos no monitor.
+
+\begin{lstlisting}
+Serial.println("Setting AP (Access Point)");
+WiFi.softAP("ESP-WIFI-MANAGER", NULL);
+
+IPAddress IP = WiFi.softAPIP();
+Serial.print("AP IP address: ");
+Serial.println(IP);
+\end{lstlisting}
+
+Enviamos a página HTML \textit{WIFIMANAGER}.
+
+\begin{lstlisting}
+server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
+    request->send(LittleFS, "/wifimanager.html", "text/html");
+});
+server.serveStatic("/", LittleFS, "/");
+\end{lstlisting}
+
+No código HTML, quando o usuário apertar o botão de \textit{submit}, os dados irão para a mesma URL só que com o método POST, e é nessa parte que pegamos os dados e escrevemos em arquivos no ESP32.
+
+Com o método \textit{params}, conseguimos a quantidade de parâmetros que foram enviados.
+
+\begin{lstlisting}
+server.on("/", HTTP_POST, [](AsyncWebServerRequest *request) {
+  int params = request->params();
+\end{lstlisting}
+
+Utilizamos um laço \textit{for} para pegar todos os parâmetros e escrever em um arquivo. Conseguimos resgatar os parâmetros utilizando o método \textit{getParam} e passando a sua posição. Ele retorna um ponteiro da classe AsyncWebParameter. Utilize o método \textit{isPost} para conferir se o parâmetro é do tipo POST.
+
+\begin{lstlisting}
+for (int i = 0; i < params; i++) {
+    const AsyncWebParameter *p = request->getParam(i);
+    if (p->isPost()) {
+\end{lstlisting}
+
+Precisamos conferir qual é o nome do parâmetro comparando com as quatro opções de parâmetros que existem. Em seguida, copiamos seu conteúdo para sua variável correspondente e utilizamos a função \textit{writeFile} para escrever o parâmetro num arquivo. Esse processo se repete com cada parâmetro
+
+\begin{lstlisting}
+// ssid
+if (p->name() == PARAM_INPUT_1) {
+    ssid = p->value().c_str();
+    Serial.print("SSID set to: ");
+    Serial.println(ssid);
+    writeFile(LittleFS, ssidPath, ssid.c_str());
+}
+\end{lstlisting}
+
+Um adendo que essa variável a qual o conteúdo é copiado é a variável global que foi criada no começo do código. É necessário para a conexão Wi-Fi que será realizada.
+
+Feito tudo isso, informamos que o processo e reiniciamos o ESP32.
+
+\begin{lstlisting}
+request->send(200, "text/plain",
+                "Done. ESP will restart, connect to your router and go to "
+                "IP address: " +
+                ip);
+delay(3000);
+ESP.restart();
+\end{lstlisting}
+
+Por fim, iniciamos o server.
+
+\begin{lstlisting}
+server.begin();
+\end{lstlisting}

@@ -1,0 +1,148 @@
+\subsection{}
+
+Para começar, importamos todas as bibliotecas necessárias.
+
+\begin{lstlisting}
+#include "LittleFS.h"
+#include <Arduino.h>
+#include <AsyncTCP.h>
+#include <ESPAsyncWebServer.h>
+#include <WiFi.h>
+\end{lstlisting}
+
+Então, criamos um objeto da classe AsyncWebServer.
+
+\begin{lstlisting}
+AsyncWebServer server(80);
+\end{lstlisting}
+
+Criamos constantes para guardar o nome dos parâmetro, assim como o endereço dos arquivos de cada parâmetro. Também criamos variáveis para guardar as informações.
+
+\begin{lstlisting}
+#define PARAM_INPUT_1 "ssid"
+#define PARAM_INPUT_2 "pass"
+#define PARAM_INPUT_3 "ip"
+#define PARAM_INPUT_4 "gateway"
+
+String ssid;
+String pass;
+String ip;
+String gateway;
+
+const char *ssidPath = "/ssid.txt";
+const char *passPath = "/pass.txt";
+const char *ipPath = "/ip.txt";
+const char *gatewayPath = "/gateway.txt";
+\end{lstlisting}
+
+Instaciamos dois objetos da classe IPAddress. Um para o endereço IP do ESP32 e outro para o endereço IP do gateway. Também definimos a máscara da rede.
+
+\begin{lstlisting}
+IPAddress localIP;
+IPAddress localGateway;
+IPAddress subnet(255, 255, 0, 0);
+\end{lstlisting}
+
+Também criamos variáveis para calcular o tempo de tentativa de conexão com a rede Wi-Fi.
+
+\begin{lstlisting}
+unsigned long previousMillis = 0;
+int interval = 10000;
+\end{lstlisting}
+
+A função \textit{initLittleFS} inicializa o gerenciador de arquivos com a função \textit{begin}.
+
+\begin{lstlisting}
+void initLittleFS() {
+  if (!LittleFS.begin(true)) {
+    Serial.println("An error has occurred while mounting LittleFS");
+  }
+  Serial.println("LittleFS mounted successfully");
+}
+\end{lstlisting}
+
+A função \textit{readFile} lê e retorna o conteúdo do arquivo do caminho especificado.
+
+\begin{lstlisting}
+String readFile(fs::FS &fs, const char *path) {
+  Serial.printf("Reading file: %s\r\n", path);
+
+  File file = fs.open(path);
+  if (!file || file.isDirectory()) {
+    Serial.println("- failed to open file for reading");
+    return String();
+  }
+
+  String fileContent;
+  while (file.available()) {
+    fileContent = file.readStringUntil('\n');
+    break;
+  }
+  return fileContent;
+}
+\end{lstlisting}
+
+Na função \textit{writeFile}, escrevemos a mensagem no arquivo de um caminho especificado.
+
+\begin{lstlisting}
+void writeFile(fs::FS &fs, const char *path, const char *message) {
+  Serial.printf("Writing file: %s\r\n", path);
+
+  File file = fs.open(path, FILE_WRITE);
+  if (!file) {
+    Serial.println("- failed to open file for writing");
+    return;
+  }
+  if (file.print(message)) {
+    Serial.println("- file written");
+  } else {
+    Serial.println("- write failed");
+  }
+}
+\end{lstlisting}
+
+A função \textit{initWifi} tenta se conectar à uma rede Wi-Fi e retorna um booleano se ele foi bem sucedido ou não.
+
+\begin{lstlisting}
+bool initWiFi() {
+...
+\end{lstlisting}
+
+No começo, ela configura o módulo Wi-fi em modo estacionário e define o endereço IP do dispositivo e do gateway.
+
+\begin{lstlisting}
+WiFi.mode(WIFI_STA);
+localIP.fromString(ip.c_str());
+localGateway.fromString(gateway.c_str());
+
+if (!WiFi.config(localIP, localGateway, subnet)) {
+    Serial.println("STA Failed to configure");
+    return false;
+}
+\end{lstlisting}
+
+Logo após, a tentativa de conexão é feita utilizando o método \textit{begin}.
+
+\begin{lstlisting}
+WiFi.begin(ssid.c_str(), pass.c_str());
+\end{lstlisting}
+
+Agora, é o momento de espera para conferir se a conexão foi realizada. Caso exceda o tempo limite, a função retorna falso. É importante que não se espere para sempre, pois isso implica que a conexão não foi realizada e é necessário tentar entrar em outra rede.
+
+\begin{lstlisting}
+unsigned long currentMillis = millis();
+previousMillis = currentMillis;
+
+while (WiFi.status() != WL_CONNECTED) {
+    currentMillis = millis();
+    
+    // evita que o ESP tente conectar a rede muitas vezes
+    if (currentMillis - previousMillis >= interval) {
+      Serial.println("Failed to connect.");
+      return false;
+    }
+}
+\end{lstlisting}
+
+Se tudo ocorreu bem, a função retorna verdadeiro.
+

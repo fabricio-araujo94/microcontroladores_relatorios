@@ -1,0 +1,22 @@
+\subsection{Instalação das bibliotecas}
+
+Para a realização do projeto, foi necessário a uso de duas biblioteca: AsynTCP e ESPAsyncWebServer. As duas bibliotecas podem ser adicionadas ao projeto pela seção de livrarias do PlatformIO, mas não foi necessário.
+
+No arquivo \textit{platformio.ini}, colocamos o seguinte código para que todas as dependências para a realização do projeto sejam adicionadas, sem necessitar instalar as bibliotecas.
+
+\begin{lstlisting}
+lib_deps = ESP Async WebServer
+\end{lstlisting}
+
+Também é necessário para a realização do projeto utilizar o gerenciador de arquivos LittleFS, então no mesmo arquivo \textit{platformio.ini}, escrevemos o seguinte código:
+
+\begin{lstlisting}
+board_build.filesystem = littlefs
+\end{lstlisting}
+
+Por último, definimos a taxa de atualização do monitor para 9600.
+
+\begin{lstlisting}
+monitor_speed = 9600
+\end{lstlisting}
+

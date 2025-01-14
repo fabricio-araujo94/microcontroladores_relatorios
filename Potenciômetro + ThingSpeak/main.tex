@@ -23,6 +23,7 @@
 
 \usepackage{float}
 \usepackage{hyperref}
+\usepackage{amsmath}
 
 \usepackage{listings}
 \usepackage{color}
@@ -51,7 +52,7 @@
      
 \sloppy
 
-\title{Deep Sleep}
+\title{Potenciômetro + ThingSpeak}
 
 \author{Fabricio Araújo Dias}
 
@@ -66,14 +67,21 @@
 \maketitle
 
 \begin{abstract}
-  This report explains the steps taken to demonstrate the use of Deep Sleep on the ESP32. To test it, we made it so that when you touch one of the microcontroller's touch pins, it wakes up and lights a simple LED.
+    This report describes the execution of the thirteenth practice of the microcontroller discipline that focuses on the use of the potentiometer to set the intensity of an RGB LED and print the voltage of a pin on the ThingSpeak platform.
 \end{abstract}
      
-\begin{resumo} 
-  Esse relatório explica os passos dados para exemplicar o uso do \textit{Deep Sleep} no ESP32. Para testá-lo, fizemos com que ao tocar em um dos pinos de \textit{touch} do microcontrolador, ele desperte e acenda um LED simples.
+\begin{resumo}
+    Esse relatório descreve a execução da décima terceira prática da disciplina de Microcontroladores que foca no uso do potenciômetro para definir a intensidade de um LED RGB e imprimir a tensão de um pino na plataforma ThingSpeak.
 \end{resumo}
 
+\input{chapters/introducao}
 
+\input{chapters/esp32_configuracao}
 
+\input{chapters/thingspeak}
+
+\input{chapters/desenvolvimento_codigo}
+
+\input{chapters/consideracoes_finais}
 
 \end{document}

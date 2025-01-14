@@ -1,0 +1,102 @@
+\section{Desenvolvimento do Código}
+
+Para o desenvolvimento do código, utilizamos o Visual Studio Code (VSCode) com a extensão do Platform IO. Na página inicial do Platform IO, criamos um novo projeto. O título é "ultrassom", a placa é "Espressif ESP32 Dev Module" e o framework é Arduino.
+
+Quando o projeto foi criado, definimos a taxa de atualização do monitor como 9600 no arquivo "platformio.ini" e inicializamos o Serial com o método \textit{begin} no \textit{setup} do código em si.
+
+\begin{lstlisting}
+// platformio.ini
+monitor_speed = 9600
+
+
+// main.cpp
+void setup() {
+    Serial.begin(9600);
+}
+
+\end{lstlisting}
+
+Definimos constantes para representar o número dos pinos do ESP32 que escolhemos para conectar ao sensor e ao LED RGB.
+
+\begin{lstlisting}
+#define TRIG 5
+#define ECHO 18
+#define RED 19
+#define GREEN 21
+\end{lstlisting}
+
+Em \textit{setup}, configuramos o modo dos pinos usando a função pinMode. Os pinos do LED são todos de saída. Já o pino de \textit{trigger} do sensor é de saída e o pino de \textit{echo} é de entrada.
+
+\begin{lstlisting}
+pinMode(TRIG, OUTPUT);
+pinMode(ECHO, INPUT);
+pinMode(RED, OUTPUT);
+pinMode(GREEN, OUTPUT);
+\end{lstlisting}
+
+Na função \textit{loop}, utilizamos a função \textit{digitalWrite} para definir os estados do pino. Para que o sensor emita um ultrassom, o pino de \textit{trigger} ficará em nível alto por um curto período de tempo, até que ele fique em nível baixo novamente. É importante que o pino esteja em nível baixo no início de cada \textit{loop}, então utilizamos o \textit{digitalWrite} sempre no início. Colocamos pequenos \textit{delays} em cada mudança de nível.
+
+\begin{lstlisting}
+void loop() {
+    digitalWrite(TRIG, LOW);
+    delayMicroseconds(20);
+    
+    digitalWrite(TRIG, HIGH);
+    delayMicroseconds(100);
+    digitalWrite(TRIG, LOW);
+\end{lstlisting}
+
+Para calcular a distância, primeiro criamos duas variáveis para guardar os dados. Uma das variáveis é um \textit{long} vai guardar a duração do pulso do sensor e a outra é um \textit{float} vai guardar a distância em centímetros. 
+
+\begin{lstlisting}
+long duration;
+float distanceCm;
+\end{lstlisting}
+
+Com a função \textit{pulseIn}, conseguimos o tamanho do pulso que o sensor emitiu. Passamos como parâmetro o número do pino de \textit{echo} e o seu estado. O valor retornado é em microsegundos.
+
+\begin{lstlisting}
+duration = pulseIn(ECHO, HIGH);
+\end{lstlisting}
+
+A fórmula para calcular a distância é multiplicar a duração do pulso pela \textbf{velocidade do som}, para então divid'ir por dois. 
+
+$$\text{distância} = \frac{\text{velocidade do som} * \text{duração}}{2}$$
+
+À nível do mar, a velocidade do som é igual a $343 m/s$. Criamos uma constante para guardar esse valor.
+
+\begin{lstlisting}
+#define SOUND_SPEED 0.034
+\end{lstlisting}
+
+Após calcular a duração do pulso, aplicamos a fórmula e obtemos a distância entre o sensor e o objeto em centímetros. Imprimimos o valor no monitor utilizando \textit{print} ou \textit{println} do Serial.
+
+\begin{lstlisting}
+distanceCm = duration * SOUND_SPEED / 2;
+
+Serial.print("Distance (cm): ");
+Serial.println(distanceCm);
+\end{lstlisting}
+
+Criar o sensor de ré improvisado é bem simples. A cor muda na medida que a distância vai se aproximando de zero. Então, usamos \textit{ifs} condicionais para definir a cor vermelha se a distância for menor do que 10 centímetros, amarelha se for maior do que 10 e menor do que 20 e verde para qualquer outro valor.
+
+Usamos novamente a função \textit{digitalWrite} para configurar o nível dos pinos. O motivo de não utilizarmos o pino azul do LED RGB é que, para atingir a cor amarela, só é preciso que o pino vermelho e o pino verde estejam em nível alto, pois amarelo em RGB é $(255, 255, 0)$.
+
+\begin{lstlisting}
+if(distanceCm <= 10) {
+    digitalWrite(RED, HIGH);
+    digitalWrite(GREEN, LOW);
+} else if (distanceCm > 10 && distanceCm < 20) {
+    digitalWrite(RED, HIGH);
+    digitalWrite(GREEN, HIGH);
+} else {
+    digitalWrite(RED, LOW);
+    digitalWrite(GREEN, HIGH);
+}
+\end{lstlisting}
+
+Para finalizar, adicionamos um \textit{delay} no final do \textit{loop}.
+
+\begin{lstlisting}
+delay(2000);
+\end{lstlisting}
